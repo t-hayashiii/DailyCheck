@@ -34,23 +34,51 @@
         font-weight: 600;
     }
 
-    /* ---- 各項目カード ---- */
+    /* ------------------------
+       スワイプ削除 UI
+       ------------------------ */
     .item-wrapper {
         position: relative;
-        overflow: hidden; /* スワイプで中身がはみ出さないように */
+        overflow: hidden;
+        margin-bottom: 12px;
+        border-radius: 10px;
     }
 
+    /* 削除ボタンエリア（後ろに隠れている） */
+    .delete-area {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 90px;
+        background: #ff4d4d;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1; /* item より下 */
+    }
+
+    .deleteBtn {
+        background: transparent;
+        border: none;
+        color: #fff;
+        font-size: 16px;
+        cursor: pointer;
+    }
+
+    /* スワイプで動くメイン部分 */
     .item {
+        position: relative;
+        z-index: 2; /* delete-area より上 */
         display: grid;
         grid-template-columns: 34px 1fr;
         align-items: center;
         background: #fff;
         padding: 14px 16px;
-        margin-bottom: 12px;
-        border-radius: 10px;
         border: 1px solid #e0e0e0;
         transition: transform 0.2s ease;
         font-size: 18px;
+        border-radius: 10px;
     }
 
     .item.checked {
@@ -61,7 +89,6 @@
     .item input[type="checkbox"] {
         width: 20px;
         height: 20px;
-        margin-top: -1px;
     }
 
     .textBox {
@@ -74,22 +101,6 @@
         color: #666;
         font-size: 14px;
         margin-top: 3px;
-    }
-
-    /* 削除ボタン（スワイプで表示） */
-    .deleteBtn {
-        position: absolute;
-        right: 0;
-        top: 0;
-        width: 90px;
-        height: 100%;
-        background: #ff4d4d;
-        color: white;
-        border: none;
-        font-size: 16px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
     }
 
     /* 新規追加エリア */
@@ -117,7 +128,7 @@
         font-size: 16px;
     }
 
-    /* 全チェック解除ボタン */
+    /* 全チェック解除 */
     #clearAllBtn {
         width: 100%;
         margin-top: 25px;
@@ -130,6 +141,7 @@
         font-size: 16px;
     }
 
+    /* 並び替えドラッグ中の透明化 */
     .drag-ghost {
         opacity: 0.4;
     }
@@ -160,7 +172,9 @@
         { name: "部屋の消灯", checked: false, timestamp: "" }
     ];
 
-    /* ========= 基本処理 ========== */
+    /* -------------------
+       データ操作
+       ------------------- */
     function loadItems() {
         const saved = localStorage.getItem(storageKey);
         return saved ? JSON.parse(saved) : defaultItems;
@@ -172,37 +186,52 @@
 
     function getNowText() {
         const now = new Date();
-        const youbi = ["日", "月", "火", "水", "木", "金", "土"][now.getDay()];
+        const youbi = ["日","月","火","水","木","金","土"][now.getDay()];
         return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")} (${youbi}) `
              + `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
     }
 
-    /* ========= カウンター更新 ========== */
+    /* -------------------
+       カウンター更新
+       ------------------- */
     function updateCounter() {
         const items = loadItems();
         const total = items.length;
         const done = items.filter(i => i.checked).length;
-        const remaining = total - done;
 
         document.getElementById("counter").textContent =
-            `チェック済：${done} / ${total}　（残り：${remaining}）`;
+            `チェック済：${done} / ${total}　（残り：${total - done}）`;
     }
 
-    /* ========= 描画処理 ========== */
+    /* -------------------
+       描画
+       ------------------- */
     function render() {
         const items = loadItems();
         const container = document.getElementById("items");
         container.innerHTML = "";
 
         items.forEach((item, idx) => {
-            const wrap = document.createElement("div");
-            wrap.className = "item-wrapper";
+            const wrapper = document.createElement("div");
+            wrapper.className = "item-wrapper";
 
+            /* 削除ボタン（後ろに隠す） */
+            const deleteArea = document.createElement("div");
+            deleteArea.className = "delete-area";
+
+            const delBtn = document.createElement("button");
+            delBtn.className = "deleteBtn";
+            delBtn.textContent = "削除";
+            delBtn.onclick = () => deleteItem(idx);
+
+            deleteArea.appendChild(delBtn);
+
+            /* メインアイテム */
             const div = document.createElement("div");
             div.className = "item";
             if (item.checked) div.classList.add("checked");
 
-            /* スワイプ用状態管理 */
+            /* -------- スワイプ処理 -------- */
             let startX = 0;
             let currentX = 0;
             let isDragging = false;
@@ -224,20 +253,21 @@
 
             div.addEventListener("touchend", () => {
                 isDragging = false;
+
                 if (currentX - startX < -60) {
-                    div.style.transform = `translateX(-90px)`;
+                    div.style.transform = "translateX(-90px)";
                 } else {
                     div.style.transform = "translateX(0)";
                 }
             });
 
-            /* checkbox */
+            /* チェックボックス */
             const cb = document.createElement("input");
             cb.type = "checkbox";
             cb.checked = item.checked;
             cb.onchange = () => toggleCheck(idx);
 
-            /* text area */
+            /* テキスト部分 */
             const textBox = document.createElement("div");
             textBox.className = "textBox";
 
@@ -251,25 +281,22 @@
             textBox.appendChild(label);
             textBox.appendChild(ts);
 
-            /* 削除ボタン */
-            const delBtn = document.createElement("button");
-            delBtn.className = "deleteBtn";
-            delBtn.textContent = "削除";
-            delBtn.onclick = () => deleteItem(idx);
-
+            /* 要素配置 */
             div.appendChild(cb);
             div.appendChild(textBox);
 
-            wrap.appendChild(delBtn);
-            wrap.appendChild(div);
+            wrapper.appendChild(deleteArea);
+            wrapper.appendChild(div);
 
-            container.appendChild(wrap);
+            container.appendChild(wrapper);
         });
 
         updateCounter();
     }
 
-    /* ========= 操作系 ========== */
+    /* -------------------
+       操作
+       ------------------- */
     function toggleCheck(index) {
         const items = loadItems();
         const item = items[index];
@@ -315,7 +342,9 @@
         initSortable();
     }
 
-    /* ========= 並び替え（スマホ対応版） ========== */
+    /* -------------------
+       並び替え（Sortable）
+       ------------------- */
     function initSortable() {
         const container = document.getElementById("items");
 
@@ -338,7 +367,9 @@
         });
     }
 
-    /* ========= 初期実行 ========== */
+    /* -------------------
+       初期実行
+       ------------------- */
     render();
     initSortable();
 </script>
