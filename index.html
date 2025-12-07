@@ -34,51 +34,23 @@
         font-weight: 600;
     }
 
-    /* ------------------------
-       スワイプ削除 UI
-       ------------------------ */
+
+    /* ---------- 各項目カード ---------- */
     .item-wrapper {
         position: relative;
-        overflow: hidden;
         margin-bottom: 12px;
-        border-radius: 10px;
     }
 
-    /* 削除ボタンエリア（後ろに隠れている） */
-    .delete-area {
-        position: absolute;
-        right: 0;
-        top: 0;
-        bottom: 0;
-        width: 90px;
-        background: #ff4d4d;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 1; /* item より下 */
-    }
-
-    .deleteBtn {
-        background: transparent;
-        border: none;
-        color: #fff;
-        font-size: 16px;
-        cursor: pointer;
-    }
-
-    /* スワイプで動くメイン部分 */
     .item {
-        position: relative;
-        z-index: 2; /* delete-area より上 */
         display: grid;
-        grid-template-columns: 34px 1fr;
+        grid-template-columns: 34px 1fr 34px;
         align-items: center;
         background: #fff;
-        padding: 14px 16px;
-        border: 1px solid #e0e0e0;
-        transition: transform 0.2s ease;
-        font-size: 18px;
+        padding: 14px 14px;
         border-radius: 10px;
+        border: 1px solid #e0e0e0;
+        transition: background 0.2s ease;
+        font-size: 18px;
     }
 
     .item.checked {
@@ -95,6 +67,7 @@
         display: flex;
         flex-direction: column;
         justify-content: center;
+        padding-left: 4px;
     }
 
     .timestamp {
@@ -103,7 +76,39 @@
         margin-top: 3px;
     }
 
-    /* 新規追加エリア */
+    /* ---------- 3点メニュー ---------- */
+    .menuBtn {
+        border: none;
+        background: transparent;
+        font-size: 20px;
+        cursor: pointer;
+        padding: 6px;
+    }
+
+    .menuBox {
+        position: absolute;
+        right: 10px;
+        top: 50px;
+        background: #fff;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        box-shadow: 0px 2px 6px rgba(0,0,0,0.15);
+        z-index: 20;
+        padding: 5px 0;
+        width: 140px;
+    }
+
+    .menuItem {
+        padding: 10px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+
+    .menuItem:hover {
+        background: #f0f0f0;
+    }
+
+    /* ---------- 新規追加 ---------- */
     #addBox {
         margin-top: 20px;
         display: flex;
@@ -128,7 +133,7 @@
         font-size: 16px;
     }
 
-    /* 全チェック解除 */
+    /* ---------- 全チェック解除 ---------- */
     #clearAllBtn {
         width: 100%;
         margin-top: 25px;
@@ -141,7 +146,6 @@
         font-size: 16px;
     }
 
-    /* 並び替えドラッグ中の透明化 */
     .drag-ghost {
         opacity: 0.4;
     }
@@ -153,7 +157,6 @@
 <h1>日常チェックアプリ</h1>
 
 <div id="counter"></div>
-
 <div id="items"></div>
 
 <div id="addBox">
@@ -163,215 +166,261 @@
 
 <button id="clearAllBtn" onclick="clearAllChecks()">全てのチェックをオフにする</button>
 
+
 <script>
-    const storageKey = "dailyCheckItems";
+/* ===============================
+   データ処理
+=============================== */
+const storageKey = "dailyCheckItems";
 
-    const defaultItems = [
-        { name: "鍵の施錠", checked: false, timestamp: "" },
-        { name: "窓の施錠", checked: false, timestamp: "" },
-        { name: "部屋の消灯", checked: false, timestamp: "" }
-    ];
+const defaultItems = [
+    { name: "鍵の施錠", icon:"", checked: false, timestamp: "" },
+    { name: "窓の施錠", icon:"", checked: false, timestamp: "" },
+    { name: "部屋の消灯", icon:"", checked: false, timestamp: "" }
+];
 
-    /* -------------------
-       データ操作
-       ------------------- */
-    function loadItems() {
-        const saved = localStorage.getItem(storageKey);
-        return saved ? JSON.parse(saved) : defaultItems;
-    }
+function loadItems() {
+    const saved = localStorage.getItem(storageKey);
+    return saved ? JSON.parse(saved) : defaultItems;
+}
+function saveItems(items) {
+    localStorage.setItem(storageKey, JSON.stringify(items));
+}
 
-    function saveItems(items) {
-        localStorage.setItem(storageKey, JSON.stringify(items));
-    }
+function getNowText() {
+    const now = new Date();
+    const youbi = ["日","月","火","水","木","金","土"][now.getDay()];
+    return `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()} (${youbi}) `
+         + `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+}
 
-    function getNowText() {
-        const now = new Date();
-        const youbi = ["日","月","火","水","木","金","土"][now.getDay()];
-        return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")} (${youbi}) `
-             + `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
-    }
 
-    /* -------------------
-       カウンター更新
-       ------------------- */
-    function updateCounter() {
-        const items = loadItems();
-        const total = items.length;
-        const done = items.filter(i => i.checked).length;
+/* ===============================
+   カウンター
+=============================== */
+function updateCounter() {
+    const items = loadItems();
+    const total = items.length;
+    const done  = items.filter(i => i.checked).length;
 
-        document.getElementById("counter").textContent =
-            `チェック済：${done} / ${total}　（残り：${total - done}）`;
-    }
+    document.getElementById("counter").textContent =
+        `チェック済：${done} / ${total}（残り：${total-done}）`;
+}
 
-    /* -------------------
-       描画
-       ------------------- */
-    function render() {
-        const items = loadItems();
-        const container = document.getElementById("items");
-        container.innerHTML = "";
 
-        items.forEach((item, idx) => {
-            const wrapper = document.createElement("div");
-            wrapper.className = "item-wrapper";
+/* ===============================
+   メニューを閉じる（全て）
+=============================== */
+function closeAllMenus() {
+    document.querySelectorAll(".menuBox").forEach(m => m.remove());
+}
 
-            /* 削除ボタン（後ろに隠す） */
-            const deleteArea = document.createElement("div");
-            deleteArea.className = "delete-area";
 
-            const delBtn = document.createElement("button");
-            delBtn.className = "deleteBtn";
-            delBtn.textContent = "削除";
-            delBtn.onclick = () => deleteItem(idx);
+/* ===============================
+   描画処理
+=============================== */
+function render() {
+    const items = loadItems();
+    const container = document.getElementById("items");
+    container.innerHTML = "";
 
-            deleteArea.appendChild(delBtn);
+    items.forEach((item, idx) => {
+        const wrap = document.createElement("div");
+        wrap.className = "item-wrapper";
 
-            /* メインアイテム */
-            const div = document.createElement("div");
-            div.className = "item";
-            if (item.checked) div.classList.add("checked");
+        const div = document.createElement("div");
+        div.className = "item";
+        if (item.checked) div.classList.add("checked");
 
-            /* -------- スワイプ処理 -------- */
-            let startX = 0;
-            let currentX = 0;
-            let isDragging = false;
+        /* チェックボックス */
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = item.checked;
+        cb.onchange = () => toggleCheck(idx);
 
-            div.addEventListener("touchstart", e => {
-                startX = e.touches[0].clientX;
-                isDragging = true;
-            });
+        /* テキスト部分 */
+        const textBox = document.createElement("div");
+        textBox.className = "textBox";
 
-            div.addEventListener("touchmove", e => {
-                if (!isDragging) return;
-                currentX = e.touches[0].clientX;
-                const delta = currentX - startX;
+        const label = document.createElement("div");
+        label.textContent = (item.icon ? item.icon + " " : "") + item.name;
 
-                if (delta < 0) {
-                    div.style.transform = `translateX(${delta}px)`;
-                }
-            });
+        const ts = document.createElement("span");
+        ts.className = "timestamp";
+        ts.textContent = item.timestamp || "";
 
-            div.addEventListener("touchend", () => {
-                isDragging = false;
+        textBox.appendChild(label);
+        textBox.appendChild(ts);
 
-                if (currentX - startX < -60) {
-                    div.style.transform = "translateX(-90px)";
-                } else {
-                    div.style.transform = "translateX(0)";
-                }
-            });
+        /* 3点メニュー */
+        const menuBtn = document.createElement("button");
+        menuBtn.className = "menuBtn";
+        menuBtn.textContent = "⋮";
+        menuBtn.onclick = (e) => showMenu(e, idx);
 
-            /* チェックボックス */
-            const cb = document.createElement("input");
-            cb.type = "checkbox";
-            cb.checked = item.checked;
-            cb.onchange = () => toggleCheck(idx);
+        /* アイテム構成 */
+        div.appendChild(cb);
+        div.appendChild(textBox);
+        div.appendChild(menuBtn);
 
-            /* テキスト部分 */
-            const textBox = document.createElement("div");
-            textBox.className = "textBox";
+        wrap.appendChild(div);
+        container.appendChild(wrap);
+    });
 
-            const label = document.createElement("div");
-            label.textContent = item.name;
+    updateCounter();
+}
 
-            const ts = document.createElement("span");
-            ts.className = "timestamp";
-            ts.textContent = item.timestamp || "";
 
-            textBox.appendChild(label);
-            textBox.appendChild(ts);
+/* ===============================
+   3点メニュー表示
+=============================== */
+function showMenu(event, index) {
+    closeAllMenus();
 
-            /* 要素配置 */
-            div.appendChild(cb);
-            div.appendChild(textBox);
+    const menu = document.createElement("div");
+    menu.className = "menuBox";
 
-            wrapper.appendChild(deleteArea);
-            wrapper.appendChild(div);
+    /* 削除 */
+    const del = document.createElement("div");
+    del.className = "menuItem";
+    del.textContent = "削除";
+    del.onclick = () => { deleteItem(index); };
 
-            container.appendChild(wrapper);
-        });
+    /* 編集 */
+    const edit = document.createElement("div");
+    edit.className = "menuItem";
+    edit.textContent = "編集";
+    edit.onclick = () => { editItem(index); };
 
-        updateCounter();
-    }
+    /* 複製 */
+    const copy = document.createElement("div");
+    copy.className = "menuItem";
+    copy.textContent = "複製";
+    copy.onclick = () => { copyItem(index); };
 
-    /* -------------------
-       操作
-       ------------------- */
-    function toggleCheck(index) {
-        const items = loadItems();
-        const item = items[index];
+    /* アイコン設定（絵文字入力） */
+    const icon = document.createElement("div");
+    icon.className = "menuItem";
+    icon.textContent = "アイコン設定";
+    icon.onclick = () => { setIcon(index); };
 
-        item.checked = !item.checked;
-        item.timestamp = item.checked ? getNowText() : "";
+    menu.appendChild(del);
+    menu.appendChild(edit);
+    menu.appendChild(copy);
+    menu.appendChild(icon);
 
-        saveItems(items);
-        render();
-        initSortable();
-    }
+    event.target.parentElement.appendChild(menu);
+}
 
-    function addItem() {
-        const name = document.getElementById("newItemName").value.trim();
-        if (!name) return;
 
-        const items = loadItems();
-        items.push({ name, checked: false, timestamp: "" });
-
-        saveItems(items);
-        document.getElementById("newItemName").value = "";
-        render();
-        initSortable();
-    }
-
-    function deleteItem(index) {
-        const items = loadItems();
-        items.splice(index, 1);
-        saveItems(items);
-        render();
-        initSortable();
-    }
-
-    function clearAllChecks() {
-        const items = loadItems();
-        items.forEach(i => {
-            i.checked = false;
-            i.timestamp = "";
-        });
-
-        saveItems(items);
-        render();
-        initSortable();
-    }
-
-    /* -------------------
-       並び替え（Sortable）
-       ------------------- */
-    function initSortable() {
-        const container = document.getElementById("items");
-
-        if (container._sortable) container._sortable.destroy();
-
-        container._sortable = Sortable.create(container, {
-            animation: 150,
-            ghostClass: "drag-ghost",
-            forceFallback: true,
-            fallbackTolerance: 3,
-            onEnd: function (evt) {
-                const items = loadItems();
-                const moved = items.splice(evt.oldIndex, 1)[0];
-                items.splice(evt.newIndex, 0, moved);
-                saveItems(items);
-
-                render();
-                initSortable();
-            }
-        });
-    }
-
-    /* -------------------
-       初期実行
-       ------------------- */
+/* ===============================
+   各機能
+=============================== */
+function toggleCheck(index) {
+    const items = loadItems();
+    const i = items[index];
+    i.checked = !i.checked;
+    i.timestamp = i.checked ? getNowText() : "";
+    saveItems(items);
     render();
     initSortable();
+}
+
+function addItem() {
+    const name = document.getElementById("newItemName").value.trim();
+    if (!name) return;
+
+    const items = loadItems();
+    items.push({ name, icon:"", checked:false, timestamp:"" });
+
+    saveItems(items);
+    document.getElementById("newItemName").value = "";
+    render();
+    initSortable();
+}
+
+function deleteItem(index) {
+    const items = loadItems();
+    items.splice(index,1);
+    saveItems(items);
+    render();
+    initSortable();
+}
+
+function editItem(index) {
+    const items = loadItems();
+    const newName = prompt("新しい名前を入力してください", items[index].name);
+    if (newName !== null && newName.trim() !== "") {
+        items[index].name = newName.trim();
+        saveItems(items);
+        render();
+        initSortable();
+    }
+}
+
+function copyItem(index) {
+    const items = loadItems();
+    const src = items[index];
+    items.splice(index+1, 0, {
+        name: src.name,
+        icon: src.icon,
+        checked: false,
+        timestamp: ""
+    });
+    saveItems(items);
+    render();
+    initSortable();
+}
+
+function setIcon(index) {
+    const icon = prompt("アイコン（絵文字）を入力してください\n空欄で削除できます");    
+    const items = loadItems();
+    items[index].icon = icon ? icon.trim() : "";
+    saveItems(items);
+    render();
+    initSortable();
+}
+
+function clearAllChecks() {
+    const items = loadItems();
+    items.forEach(i => { i.checked = false; i.timestamp = ""; });
+    saveItems(items);
+    render();
+    initSortable();
+}
+
+
+/* ===============================
+   並び替え SortableJS
+=============================== */
+function initSortable() {
+    const container = document.getElementById("items");
+
+    if (container._sortable) container._sortable.destroy();
+
+    container._sortable = Sortable.create(container, {
+        animation: 150,
+        ghostClass: "drag-ghost",
+        forceFallback: true,
+        fallbackTolerance: 3,
+        onEnd: function(evt) {
+            const items = loadItems();
+            const moved = items.splice(evt.oldIndex, 1)[0];
+            items.splice(evt.newIndex, 0, moved);
+            saveItems(items);
+
+            render();
+            initSortable();
+        }
+    });
+}
+
+
+/* ===============================
+   初期表示
+=============================== */
+render();
+initSortable();
 </script>
 
 </body>
