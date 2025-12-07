@@ -239,9 +239,11 @@
         const container = document.getElementById("items");
 
         Sortable.create(container, {
-            animation: 150,
-            ghostClass: "drag-ghost",
-            onEnd: function (evt) {
+                animation: 150,
+                ghostClass: "drag-ghost",
+                forceFallback: true,        // ★ スマホの並び替えに必須
+                fallbackTolerance: 3,       // ★ 誤作動防止（推奨）
+                onEnd: function (evt) {
                 const items = loadItems();
                 const moved = items.splice(evt.oldIndex, 1)[0];
                 items.splice(evt.newIndex, 0, moved);
@@ -249,6 +251,7 @@
                 render();
             }
         });
+
     }
 
     render();
