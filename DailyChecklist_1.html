@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>日常チェックアプリ</title>
+<style>
+    body {
+        font-family: 'Segoe UI', sans-serif;
+        padding: 30px;
+        background: #f5f5f7;
+        color: #333;
+        max-width: 480px;
+        margin: auto;
+    }
+
+    h1 {
+        text-align: center;
+        margin-bottom: 20px;
+        font-weight: 600;
+    }
+
+    /* ---- 各項目カード ---- */
+    .item {
+    display: grid;
+    grid-template-columns: 30px 1fr auto;
+    align-items: center;
+    background: #fff;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    transition: background 0.2s ease;
+    }
+
+    .item.checked {
+        background: #e9f7ec;
+        border-color: #b6e2c2;
+    }
+
+    .item input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        vertical-align: middle;
+        margin-top: -1px;
+    }
+
+    .item div {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .timestamp {
+        color: #666;
+        font-size: 0.85em;
+        margin-top: 2px;
+    }
+
+
+    /* 削除ボタン */
+    .deleteBtn {
+        padding: 4px 8px;
+        font-size: 12px;
+        border: none;
+        background: #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    .deleteBtn:hover {
+        background: #ccc;
+    }
+
+    /* 新規追加エリア */
+    #addBox {
+        margin-top: 20px;
+        display: flex;
+        gap: 8px;
+    }
+
+    #newItemName {
+        flex: 1;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+    }
+
+    #addItemBtn {
+        padding: 8px 12px;
+        border: none;
+        background: #4a90e2;
+        color: white;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    #addItemBtn:hover {
+        background: #3576c8;
+    }
+
+    /* 全チェック解除ボタン */
+    #clearAllBtn {
+        width: 100%;
+        margin-top: 25px;
+        padding: 10px 0;
+        border: none;
+        background: #bbb;
+        color: #fff;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    #clearAllBtn:hover {
+        background: #999;
+    }
+
+</style>
+</head>
+<body>
+
+<h1>日常チェックアプリ</h1>
+
+<div id="items"></div>
+
+<div id="addBox">
+    <input type="text" id="newItemName" placeholder="新しい項目名を追加">
+    <button id="addItemBtn" onclick="addItem()">追加</button>
+</div>
+
+<button id="clearAllBtn" onclick="clearAllChecks()">全てのチェックをオフにする</button>
+
+<script>
+    const storageKey = "dailyCheckItems";
+
+    const defaultItems = [
+        { name: "鍵の施錠", checked: false, timestamp: "" },
+        { name: "窓の施錠", checked: false, timestamp: "" },
+        { name: "部屋の消灯", checked: false, timestamp: "" }
+    ];
+
+    function loadItems() {
+        const saved = localStorage.getItem(storageKey);
+        return saved ? JSON.parse(saved) : defaultItems;
+    }
+
+    function saveItems(items) {
+        localStorage.setItem(storageKey, JSON.stringify(items));
+    }
+
+    function getNowText() {
+        const now = new Date();
+        const youbi = ["日", "月", "火", "水", "木", "金", "土"][now.getDay()];
+        return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")} (${youbi}) `
+             + `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+    }
+
+    function render() {
+        const items = loadItems();
+        const container = document.getElementById("items");
+        container.innerHTML = "";
+
+        items.forEach((item, idx) => {
+            const div = document.createElement("div");
+            div.className = "item";
+            if (item.checked) div.classList.add("checked");
+
+            const cb = document.createElement("input");
+            cb.type = "checkbox";
+            cb.checked = item.checked;
+            cb.onchange = () => toggleCheck(idx);
+
+            const textContainer = document.createElement("div");
+
+            const label = document.createElement("div");
+            label.textContent = item.name;
+
+            const ts = document.createElement("span");
+            ts.className = "timestamp";
+            ts.textContent = item.timestamp ? item.timestamp : "";
+
+            textContainer.appendChild(label);
+            textContainer.appendChild(ts);
+
+            const delBtn = document.createElement("button");
+            delBtn.textContent = "削除";
+            delBtn.className = "deleteBtn";
+            delBtn.onclick = () => deleteItem(idx);
+
+            div.appendChild(cb);
+            div.appendChild(textContainer);
+            div.appendChild(delBtn);
+
+            container.appendChild(div);
+        });
+    }
+
+    function toggleCheck(index) {
+        const items = loadItems();
+        const target = items[index];
+
+        target.checked = !target.checked;
+        target.timestamp = target.checked ? getNowText() : "";
+
+        saveItems(items);
+        render();
+    }
+
+    function addItem() {
+        const name = document.getElementById("newItemName").value.trim();
+        if (!name) return;
+
+        const items = loadItems();
+        items.push({ name, checked: false, timestamp: "" });
+
+        saveItems(items);
+        document.getElementById("newItemName").value = "";
+        render();
+    }
+
+    function deleteItem(index) {
+        const items = loadItems();
+        items.splice(index, 1);
+        saveItems(items);
+        render();
+    }
+
+    function clearAllChecks() {
+        const items = loadItems();
+        items.forEach(i => {
+            i.checked = false;
+            i.timestamp = "";
+        });
+        saveItems(items);
+        render();
+    }
+
+    render();
+</script>
+
+</body>
+</html>
