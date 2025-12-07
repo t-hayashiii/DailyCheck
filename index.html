@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>日常チェックアプリ</title>
 
-<!-- SortableJS -->
+<!-- SortableJS（ドラッグ並び替え用） -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
 <style>
@@ -21,22 +21,35 @@
 
     h1 {
         text-align: center;
-        margin-bottom: 25px;
+        margin-bottom: 10px;
         font-weight: 600;
         font-size: 24px;
     }
 
+    /* カウンター表示 */
+    #counter {
+        text-align: center;
+        margin-bottom: 15px;
+        font-size: 18px;
+        font-weight: 600;
+    }
+
     /* ---- 各項目カード ---- */
+    .item-wrapper {
+        position: relative;
+        overflow: hidden; /* スワイプで中身がはみ出さないように */
+    }
+
     .item {
         display: grid;
-        grid-template-columns: 34px 1fr auto;
+        grid-template-columns: 34px 1fr;
         align-items: center;
         background: #fff;
         padding: 14px 16px;
         margin-bottom: 12px;
         border-radius: 10px;
         border: 1px solid #e0e0e0;
-        transition: background 0.2s ease;
+        transition: transform 0.2s ease;
         font-size: 18px;
     }
 
@@ -48,11 +61,10 @@
     .item input[type="checkbox"] {
         width: 20px;
         height: 20px;
-        vertical-align: middle;
         margin-top: -1px;
     }
 
-    .item div {
+    .textBox {
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -64,15 +76,23 @@
         margin-top: 3px;
     }
 
+    /* 削除ボタン（スワイプで表示） */
     .deleteBtn {
-        padding: 6px 10px;
-        font-size: 14px;
+        position: absolute;
+        right: 0;
+        top: 0;
+        width: 90px;
+        height: 100%;
+        background: #ff4d4d;
+        color: white;
         border: none;
-        background: #ddd;
-        border-radius: 6px;
-        cursor: pointer;
+        font-size: 16px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
     }
 
+    /* 新規追加エリア */
     #addBox {
         margin-top: 20px;
         display: flex;
@@ -97,6 +117,7 @@
         font-size: 16px;
     }
 
+    /* 全チェック解除ボタン */
     #clearAllBtn {
         width: 100%;
         margin-top: 25px;
@@ -119,6 +140,8 @@
 
 <h1>日常チェックアプリ</h1>
 
+<div id="counter"></div>
+
 <div id="items"></div>
 
 <div id="addBox">
@@ -137,6 +160,7 @@
         { name: "部屋の消灯", checked: false, timestamp: "" }
     ];
 
+    /* ========= 基本処理 ========== */
     function loadItems() {
         const saved = localStorage.getItem(storageKey);
         return saved ? JSON.parse(saved) : defaultItems;
@@ -153,23 +177,70 @@
              + `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
     }
 
-    /* ---- 描画処理 ---- */
+    /* ========= カウンター更新 ========== */
+    function updateCounter() {
+        const items = loadItems();
+        const total = items.length;
+        const done = items.filter(i => i.checked).length;
+        const remaining = total - done;
+
+        document.getElementById("counter").textContent =
+            `チェック済：${done} / ${total}　（残り：${remaining}）`;
+    }
+
+    /* ========= 描画処理 ========== */
     function render() {
         const items = loadItems();
         const container = document.getElementById("items");
         container.innerHTML = "";
 
         items.forEach((item, idx) => {
+            const wrap = document.createElement("div");
+            wrap.className = "item-wrapper";
+
             const div = document.createElement("div");
             div.className = "item";
             if (item.checked) div.classList.add("checked");
 
+            /* スワイプ用状態管理 */
+            let startX = 0;
+            let currentX = 0;
+            let isDragging = false;
+
+            div.addEventListener("touchstart", e => {
+                startX = e.touches[0].clientX;
+                isDragging = true;
+            });
+
+            div.addEventListener("touchmove", e => {
+                if (!isDragging) return;
+                currentX = e.touches[0].clientX;
+                const delta = currentX - startX;
+
+                if (delta < 0) {
+                    div.style.transform = `translateX(${delta}px)`;
+                }
+            });
+
+            div.addEventListener("touchend", () => {
+                isDragging = false;
+                if (currentX - startX < -60) {
+                    div.style.transform = `translateX(-90px)`;
+                } else {
+                    div.style.transform = "translateX(0)";
+                }
+            });
+
+            /* checkbox */
             const cb = document.createElement("input");
             cb.type = "checkbox";
             cb.checked = item.checked;
             cb.onchange = () => toggleCheck(idx);
 
-            const textContainer = document.createElement("div");
+            /* text area */
+            const textBox = document.createElement("div");
+            textBox.className = "textBox";
+
             const label = document.createElement("div");
             label.textContent = item.name;
 
@@ -177,34 +248,40 @@
             ts.className = "timestamp";
             ts.textContent = item.timestamp || "";
 
-            textContainer.appendChild(label);
-            textContainer.appendChild(ts);
+            textBox.appendChild(label);
+            textBox.appendChild(ts);
 
+            /* 削除ボタン */
             const delBtn = document.createElement("button");
-            delBtn.textContent = "削除";
             delBtn.className = "deleteBtn";
+            delBtn.textContent = "削除";
             delBtn.onclick = () => deleteItem(idx);
 
             div.appendChild(cb);
-            div.appendChild(textContainer);
-            div.appendChild(delBtn);
+            div.appendChild(textBox);
 
-            container.appendChild(div);
+            wrap.appendChild(delBtn);
+            wrap.appendChild(div);
+
+            container.appendChild(wrap);
         });
+
+        updateCounter();
     }
 
-    /* ---- チェック切り替え ---- */
+    /* ========= 操作系 ========== */
     function toggleCheck(index) {
         const items = loadItems();
-        const target = items[index];
-        target.checked = !target.checked;
-        target.timestamp = target.checked ? getNowText() : "";
+        const item = items[index];
+
+        item.checked = !item.checked;
+        item.timestamp = item.checked ? getNowText() : "";
+
         saveItems(items);
         render();
         initSortable();
     }
 
-    /* ---- 新規項目追加 ---- */
     function addItem() {
         const name = document.getElementById("newItemName").value.trim();
         if (!name) return;
@@ -218,7 +295,6 @@
         initSortable();
     }
 
-    /* ---- 削除 ---- */
     function deleteItem(index) {
         const items = loadItems();
         items.splice(index, 1);
@@ -227,32 +303,29 @@
         initSortable();
     }
 
-    /* ---- 全チェック解除 ---- */
     function clearAllChecks() {
         const items = loadItems();
         items.forEach(i => {
             i.checked = false;
             i.timestamp = "";
         });
+
         saveItems(items);
         render();
         initSortable();
     }
 
-    /* ---- Sortable 初期化（スマホ対応版） ---- */
+    /* ========= 並び替え（スマホ対応版） ========== */
     function initSortable() {
         const container = document.getElementById("items");
 
-        // 既存Sortableインスタンスがあれば削除（★スマホでは必須）
-        if (container._sortable) {
-            container._sortable.destroy();
-        }
+        if (container._sortable) container._sortable.destroy();
 
         container._sortable = Sortable.create(container, {
             animation: 150,
             ghostClass: "drag-ghost",
-            forceFallback: true,       // ★ iOS必須
-            fallbackTolerance: 3,      // ★ 誤タッチ防止
+            forceFallback: true,
+            fallbackTolerance: 3,
             onEnd: function (evt) {
                 const items = loadItems();
                 const moved = items.splice(evt.oldIndex, 1)[0];
@@ -260,12 +333,12 @@
                 saveItems(items);
 
                 render();
-                initSortable();        // ★ 並び替え後に再初期化
+                initSortable();
             }
         });
     }
 
-    /* ---- 初期実行 ---- */
+    /* ========= 初期実行 ========== */
     render();
     initSortable();
 </script>
