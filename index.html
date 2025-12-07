@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>日常チェックアプリ</title>
 
-<!-- SortableJS（ドラッグ並び替え用） -->
+<!-- SortableJS -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
 <style>
@@ -26,16 +26,27 @@
         font-size: 24px;
     }
 
-    /* カウンター表示 */
     #counter {
-        text-align: center;
-        margin-bottom: 15px;
-        font-size: 18px;
-        font-weight: 600;
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 20px;
+    font-weight: 700;
+    padding: 8px 0;
+    }
+
+    #counter .done {
+        color: #2e7d32; /* 緑、チェック済 */
+    }
+
+    #counter .total {
+        color: #333;
+    }
+
+    #counter .remain {
+        color: #d84315; /* オレンジ系で視認性アップ */
     }
 
 
-    /* ---------- 各項目カード ---------- */
     .item-wrapper {
         position: relative;
         margin-bottom: 12px;
@@ -46,11 +57,11 @@
         grid-template-columns: 34px 1fr 34px;
         align-items: center;
         background: #fff;
-        padding: 14px 14px;
+        padding: 14px;
         border-radius: 10px;
         border: 1px solid #e0e0e0;
-        transition: background 0.2s ease;
         font-size: 18px;
+        transition: background 0.2s ease;
     }
 
     .item.checked {
@@ -58,7 +69,7 @@
         border-color: #b6e2c2;
     }
 
-    .item input[type="checkbox"] {
+    .item input[type=checkbox] {
         width: 20px;
         height: 20px;
     }
@@ -66,49 +77,44 @@
     .textBox {
         display: flex;
         flex-direction: column;
-        justify-content: center;
-        padding-left: 4px;
+        margin-left: 4px;
     }
 
     .timestamp {
         color: #666;
         font-size: 14px;
-        margin-top: 3px;
+        margin-top: 4px;
     }
 
-    /* ---------- 3点メニュー ---------- */
     .menuBtn {
+        background: none;
         border: none;
-        background: transparent;
-        font-size: 20px;
+        font-size: 22px;
         cursor: pointer;
-        padding: 6px;
     }
 
     .menuBox {
         position: absolute;
         right: 10px;
-        top: 50px;
+        top: 52px;
         background: #fff;
         border: 1px solid #ccc;
         border-radius: 6px;
-        box-shadow: 0px 2px 6px rgba(0,0,0,0.15);
-        z-index: 20;
-        padding: 5px 0;
-        width: 140px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        width: 150px;
+        z-index: 10;
     }
 
     .menuItem {
         padding: 10px;
-        cursor: pointer;
         font-size: 16px;
+        cursor: pointer;
     }
 
     .menuItem:hover {
-        background: #f0f0f0;
+        background: #eee;
     }
 
-    /* ---------- 新規追加 ---------- */
     #addBox {
         margin-top: 20px;
         display: flex;
@@ -118,49 +124,46 @@
     #newItemName {
         flex: 1;
         padding: 10px;
-        border: 1px solid #ccc;
-        border-radius: 6px;
         font-size: 16px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
     }
 
     #addItemBtn {
         padding: 10px 12px;
-        border: none;
         background: #4a90e2;
-        color: white;
         border-radius: 6px;
-        cursor: pointer;
+        border: none;
+        color: white;
         font-size: 16px;
     }
 
-    /* ---------- 全チェック解除 ---------- */
     #clearAllBtn {
-        width: 100%;
         margin-top: 25px;
         padding: 12px 0;
+        width: 100%;
         border: none;
         background: #bbb;
-        color: #fff;
-        border-radius: 6px;
-        cursor: pointer;
+        color: white;
         font-size: 16px;
+        border-radius: 6px;
     }
 
     .drag-ghost {
-        opacity: 0.4;
+        opacity: 0.3;
     }
+
 </style>
 </head>
 
 <body>
 
 <h1>日常チェックアプリ</h1>
-
 <div id="counter"></div>
 <div id="items"></div>
 
 <div id="addBox">
-    <input type="text" id="newItemName" placeholder="新しい項目名を追加">
+    <input id="newItemName" type="text" placeholder="新しい項目名を追加">
     <button id="addItemBtn" onclick="addItem()">追加</button>
 </div>
 
@@ -169,105 +172,54 @@
 
 <script>
 /* ===============================
-   データ処理
+   データ
 =============================== */
 const storageKey = "dailyCheckItems";
 
 const defaultItems = [
-    { name: "鍵の施錠", icon:"", checked: false, timestamp: "" },
-    { name: "窓の施錠", icon:"", checked: false, timestamp: "" },
-    { name: "部屋の消灯", icon:"", checked: false, timestamp: "" }
+    { name: "鍵の施錠", icon: "", checked: false, timestamp: "" },
+    { name: "窓の施錠", icon: "", checked: false, timestamp: "" },
+    { name: "部屋の消灯", icon: "", checked: false, timestamp: "" }
 ];
 
 function loadItems() {
-    const saved = localStorage.getItem(storageKey);
-    return saved ? JSON.parse(saved) : defaultItems;
+    const data = localStorage.getItem(storageKey);
+    return data ? JSON.parse(data) : defaultItems;
 }
 function saveItems(items) {
     localStorage.setItem(storageKey, JSON.stringify(items));
 }
 
-function getNowText() {
-    const now = new Date();
-    const youbi = ["日","月","火","水","木","金","土"][now.getDay()];
-    return `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()} (${youbi}) `
-         + `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+function nowText() {
+    const d = new Date();
+    const w = ["日","月","火","水","木","金","土"][d.getDay()];
+    return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()} (${w}) `
+         + `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
 }
 
 
 /* ===============================
-   カウンター
+   カウンター更新
 =============================== */
 function updateCounter() {
     const items = loadItems();
+    const done = items.filter(i => i.checked).length;
     const total = items.length;
-    const done  = items.filter(i => i.checked).length;
+    const remain = total - done;
 
-    document.getElementById("counter").textContent =
-        `チェック済：${done} / ${total}（残り：${total-done}）`;
+    document.getElementById("counter").innerHTML =
+        `<span class="done">${done}</span> /
+         <span class="total">${total}</span>
+         （残り：<span class="remain">${remain}</span>）`;
 }
 
 
+
 /* ===============================
-   メニューを閉じる（全て）
+   メニューを閉じる
 =============================== */
-function closeAllMenus() {
+function closeMenus() {
     document.querySelectorAll(".menuBox").forEach(m => m.remove());
-}
-
-
-/* ===============================
-   描画処理
-=============================== */
-function render() {
-    const items = loadItems();
-    const container = document.getElementById("items");
-    container.innerHTML = "";
-
-    items.forEach((item, idx) => {
-        const wrap = document.createElement("div");
-        wrap.className = "item-wrapper";
-
-        const div = document.createElement("div");
-        div.className = "item";
-        if (item.checked) div.classList.add("checked");
-
-        /* チェックボックス */
-        const cb = document.createElement("input");
-        cb.type = "checkbox";
-        cb.checked = item.checked;
-        cb.onchange = () => toggleCheck(idx);
-
-        /* テキスト部分 */
-        const textBox = document.createElement("div");
-        textBox.className = "textBox";
-
-        const label = document.createElement("div");
-        label.textContent = (item.icon ? item.icon + " " : "") + item.name;
-
-        const ts = document.createElement("span");
-        ts.className = "timestamp";
-        ts.textContent = item.timestamp || "";
-
-        textBox.appendChild(label);
-        textBox.appendChild(ts);
-
-        /* 3点メニュー */
-        const menuBtn = document.createElement("button");
-        menuBtn.className = "menuBtn";
-        menuBtn.textContent = "⋮";
-        menuBtn.onclick = (e) => showMenu(e, idx);
-
-        /* アイテム構成 */
-        div.appendChild(cb);
-        div.appendChild(textBox);
-        div.appendChild(menuBtn);
-
-        wrap.appendChild(div);
-        container.appendChild(wrap);
-    });
-
-    updateCounter();
 }
 
 
@@ -275,55 +227,48 @@ function render() {
    3点メニュー表示
 =============================== */
 function showMenu(event, index) {
-    closeAllMenus();
+    event.stopPropagation();
+    closeMenus();
+
+    const wrap = event.target.closest(".item-wrapper");
 
     const menu = document.createElement("div");
     menu.className = "menuBox";
 
-    /* 削除 */
-    const del = document.createElement("div");
-    del.className = "menuItem";
-    del.textContent = "削除";
-    del.onclick = () => { deleteItem(index); };
+    const addMenu = (label, action) => {
+        const m = document.createElement("div");
+        m.className = "menuItem";
+        m.textContent = label;
+        m.onclick = action;
+        menu.appendChild(m);
+    };
 
-    /* 編集 */
-    const edit = document.createElement("div");
-    edit.className = "menuItem";
-    edit.textContent = "編集";
-    edit.onclick = () => { editItem(index); };
+    addMenu("削除", () => { deleteItem(index); });
+    addMenu("編集", () => { editItem(index); });
+    addMenu("複製", () => { copyItem(index); });
+    addMenu("アイコン設定", () => { setIcon(index); });
 
-    /* 複製 */
-    const copy = document.createElement("div");
-    copy.className = "menuItem";
-    copy.textContent = "複製";
-    copy.onclick = () => { copyItem(index); };
+    wrap.appendChild(menu);
 
-    /* アイコン設定（絵文字入力） */
-    const icon = document.createElement("div");
-    icon.className = "menuItem";
-    icon.textContent = "アイコン設定";
-    icon.onclick = () => { setIcon(index); };
+    setTimeout(() => {
+        document.addEventListener("click", outsideClose, { once: true });
+    }, 0);
 
-    menu.appendChild(del);
-    menu.appendChild(edit);
-    menu.appendChild(copy);
-    menu.appendChild(icon);
-
-    event.target.parentElement.appendChild(menu);
+    function outsideClose(e) {
+        if (!menu.contains(e.target)) closeMenus();
+    }
 }
 
 
 /* ===============================
-   各機能
+   各操作
 =============================== */
-function toggleCheck(index) {
+function toggleCheck(i) {
     const items = loadItems();
-    const i = items[index];
-    i.checked = !i.checked;
-    i.timestamp = i.checked ? getNowText() : "";
+    items[i].checked = !items[i].checked;
+    items[i].timestamp = items[i].checked ? nowText() : "";
     saveItems(items);
     render();
-    initSortable();
 }
 
 function addItem() {
@@ -331,37 +276,34 @@ function addItem() {
     if (!name) return;
 
     const items = loadItems();
-    items.push({ name, icon:"", checked:false, timestamp:"" });
+    items.push({ name, icon: "", checked: false, timestamp: "" });
 
     saveItems(items);
     document.getElementById("newItemName").value = "";
     render();
-    initSortable();
 }
 
-function deleteItem(index) {
+function deleteItem(i) {
     const items = loadItems();
-    items.splice(index,1);
+    items.splice(i, 1);
     saveItems(items);
     render();
-    initSortable();
 }
 
-function editItem(index) {
+function editItem(i) {
     const items = loadItems();
-    const newName = prompt("新しい名前を入力してください", items[index].name);
-    if (newName !== null && newName.trim() !== "") {
-        items[index].name = newName.trim();
+    const newName = prompt("新しい名前を入力してください", items[i].name);
+    if (newName && newName.trim()) {
+        items[i].name = newName.trim();
         saveItems(items);
         render();
-        initSortable();
     }
 }
 
-function copyItem(index) {
+function copyItem(i) {
     const items = loadItems();
-    const src = items[index];
-    items.splice(index+1, 0, {
+    const src = items[i];
+    items.splice(i+1, 0, {
         name: src.name,
         icon: src.icon,
         checked: false,
@@ -369,58 +311,106 @@ function copyItem(index) {
     });
     saveItems(items);
     render();
-    initSortable();
 }
 
-function setIcon(index) {
-    const icon = prompt("アイコン（絵文字）を入力してください\n空欄で削除できます");    
+function setIcon(i) {
     const items = loadItems();
-    items[index].icon = icon ? icon.trim() : "";
+    const icon = prompt("アイコン（絵文字）を入力してください\n空欄で削除できます");
+
+    items[i].icon = icon ? icon.trim() : "";
     saveItems(items);
     render();
-    initSortable();
 }
 
 function clearAllChecks() {
     const items = loadItems();
-    items.forEach(i => { i.checked = false; i.timestamp = ""; });
+    items.forEach(it => {
+        it.checked = false;
+        it.timestamp = "";
+    });
     saveItems(items);
     render();
-    initSortable();
 }
 
 
 /* ===============================
-   並び替え SortableJS
+   並び替え
 =============================== */
 function initSortable() {
-    const container = document.getElementById("items");
+    const el = document.getElementById("items");
+    if (el._sortable) el._sortable.destroy();
 
-    if (container._sortable) container._sortable.destroy();
-
-    container._sortable = Sortable.create(container, {
+    el._sortable = Sortable.create(el, {
         animation: 150,
         ghostClass: "drag-ghost",
-        forceFallback: true,
-        fallbackTolerance: 3,
-        onEnd: function(evt) {
+        onEnd: (e) => {
             const items = loadItems();
-            const moved = items.splice(evt.oldIndex, 1)[0];
-            items.splice(evt.newIndex, 0, moved);
+            const moved = items.splice(e.oldIndex, 1)[0];
+            items.splice(e.newIndex, 0, moved);
             saveItems(items);
-
             render();
-            initSortable();
         }
     });
 }
 
 
 /* ===============================
-   初期表示
+   描画
 =============================== */
+function render() {
+    closeMenus();
+
+    const items = loadItems();
+    const container = document.getElementById("items");
+    container.innerHTML = "";
+
+    items.forEach((it, i) => {
+        const wrap = document.createElement("div");
+        wrap.className = "item-wrapper";
+
+        const row = document.createElement("div");
+        row.className = "item";
+        if (it.checked) row.classList.add("checked");
+
+        /* チェックボックス */
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = it.checked;
+        cb.onchange = () => toggleCheck(i);
+
+        /* テキスト */
+        const text = document.createElement("div");
+        text.className = "textBox";
+
+        const name = document.createElement("div");
+        name.textContent = (it.icon ? it.icon + " " : "") + it.name;
+
+        const ts = document.createElement("div");
+        ts.className = "timestamp";
+        ts.textContent = it.timestamp;
+
+        text.appendChild(name);
+        text.appendChild(ts);
+
+        /* メニューボタン */
+        const menuBtn = document.createElement("button");
+        menuBtn.className = "menuBtn";
+        menuBtn.textContent = "⋮";
+        menuBtn.onclick = (e) => showMenu(e, i);
+
+        row.appendChild(cb);
+        row.appendChild(text);
+        row.appendChild(menuBtn);
+        wrap.appendChild(row);
+
+        container.appendChild(wrap);
+    });
+
+    updateCounter();
+    initSortable();
+}
+
 render();
-initSortable();
 </script>
 
 </body>
