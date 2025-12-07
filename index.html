@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>日常チェックアプリ</title>
 
-<!-- SortableJS（ドラッグ並び替え用） -->
+<!-- SortableJS -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
 <style>
@@ -64,7 +64,6 @@
         margin-top: 3px;
     }
 
-    /* 削除ボタン */
     .deleteBtn {
         padding: 6px 10px;
         font-size: 14px;
@@ -74,7 +73,6 @@
         cursor: pointer;
     }
 
-    /* 新規追加エリア */
     #addBox {
         margin-top: 20px;
         display: flex;
@@ -99,7 +97,6 @@
         font-size: 16px;
     }
 
-    /* 全チェック解除ボタン */
     #clearAllBtn {
         width: 100%;
         margin-top: 25px;
@@ -112,7 +109,6 @@
         font-size: 16px;
     }
 
-    /* ドラッグ中のスタイル */
     .drag-ghost {
         opacity: 0.4;
     }
@@ -157,6 +153,7 @@
              + `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
     }
 
+    /* ---- 描画処理 ---- */
     function render() {
         const items = loadItems();
         const container = document.getElementById("items");
@@ -194,10 +191,9 @@
 
             container.appendChild(div);
         });
-
-        initSortable();
     }
 
+    /* ---- チェック切り替え ---- */
     function toggleCheck(index) {
         const items = loadItems();
         const target = items[index];
@@ -205,25 +201,33 @@
         target.timestamp = target.checked ? getNowText() : "";
         saveItems(items);
         render();
+        initSortable();
     }
 
+    /* ---- 新規項目追加 ---- */
     function addItem() {
         const name = document.getElementById("newItemName").value.trim();
         if (!name) return;
+
         const items = loadItems();
         items.push({ name, checked: false, timestamp: "" });
+
         saveItems(items);
         document.getElementById("newItemName").value = "";
         render();
+        initSortable();
     }
 
+    /* ---- 削除 ---- */
     function deleteItem(index) {
         const items = loadItems();
         items.splice(index, 1);
         saveItems(items);
         render();
+        initSortable();
     }
 
+    /* ---- 全チェック解除 ---- */
     function clearAllChecks() {
         const items = loadItems();
         items.forEach(i => {
@@ -232,29 +236,38 @@
         });
         saveItems(items);
         render();
+        initSortable();
     }
 
-    /* ---- SortableJS（並び替え機能） ---- */
+    /* ---- Sortable 初期化（スマホ対応版） ---- */
     function initSortable() {
         const container = document.getElementById("items");
 
-        Sortable.create(container, {
-                animation: 150,
-                ghostClass: "drag-ghost",
-                forceFallback: true,        // ★ スマホの並び替えに必須
-                fallbackTolerance: 3,       // ★ 誤作動防止（推奨）
-                onEnd: function (evt) {
+        // 既存Sortableインスタンスがあれば削除（★スマホでは必須）
+        if (container._sortable) {
+            container._sortable.destroy();
+        }
+
+        container._sortable = Sortable.create(container, {
+            animation: 150,
+            ghostClass: "drag-ghost",
+            forceFallback: true,       // ★ iOS必須
+            fallbackTolerance: 3,      // ★ 誤タッチ防止
+            onEnd: function (evt) {
                 const items = loadItems();
                 const moved = items.splice(evt.oldIndex, 1)[0];
                 items.splice(evt.newIndex, 0, moved);
                 saveItems(items);
+
                 render();
+                initSortable();        // ★ 並び替え後に再初期化
             }
         });
-
     }
 
+    /* ---- 初期実行 ---- */
     render();
+    initSortable();
 </script>
 
 </body>
