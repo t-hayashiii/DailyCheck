@@ -2,34 +2,39 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">  <!-- ★ 追加 -->
 <title>日常チェックアプリ</title>
+
 <style>
     body {
         font-family: 'Segoe UI', sans-serif;
-        padding: 30px;
+        padding: 20px;
         background: #f5f5f7;
         color: #333;
-        max-width: 480px;
+        max-width: 360px;     /* ★ スマホ幅に最適化 */
         margin: auto;
+        font-size: 18px;      /* ★ 全体フォント拡大 */
     }
 
     h1 {
         text-align: center;
-        margin-bottom: 20px;
+        margin-bottom: 25px;
         font-weight: 600;
+        font-size: 24px;      /* ★ 見出しも大きめ */
     }
 
     /* ---- 各項目カード ---- */
     .item {
-    display: grid;
-    grid-template-columns: 30px 1fr auto;
-    align-items: center;
-    background: #fff;
-    padding: 12px 14px;
-    margin-bottom: 10px;
-    border-radius: 8px;
-    border: 1px solid #e0e0e0;
-    transition: background 0.2s ease;
+        display: grid;
+        grid-template-columns: 34px 1fr auto;
+        align-items: center;
+        background: #fff;
+        padding: 14px 16px;
+        margin-bottom: 12px;
+        border-radius: 10px;
+        border: 1px solid #e0e0e0;
+        transition: background 0.2s ease;
+        font-size: 18px;     /* ★ 項目テキスト大きく */
     }
 
     .item.checked {
@@ -38,8 +43,8 @@
     }
 
     .item input[type="checkbox"] {
-        width: 18px;
-        height: 18px;
+        width: 20px;   /* ★ 大きめ */
+        height: 20px;
         vertical-align: middle;
         margin-top: -1px;
     }
@@ -52,22 +57,18 @@
 
     .timestamp {
         color: #666;
-        font-size: 0.85em;
-        margin-top: 2px;
+        font-size: 14px;
+        margin-top: 3px;
     }
-
 
     /* 削除ボタン */
     .deleteBtn {
-        padding: 4px 8px;
-        font-size: 12px;
+        padding: 6px 10px;
+        font-size: 14px;   /* ★ 見やすく拡大 */
         border: none;
         background: #ddd;
-        border-radius: 4px;
+        border-radius: 6px;
         cursor: pointer;
-    }
-    .deleteBtn:hover {
-        background: #ccc;
     }
 
     /* 新規追加エリア */
@@ -79,40 +80,37 @@
 
     #newItemName {
         flex: 1;
-        padding: 8px;
+        padding: 10px;
         border: 1px solid #ccc;
         border-radius: 6px;
+        font-size: 16px;   /* ★ 入力欄拡大 */
     }
 
     #addItemBtn {
-        padding: 8px 12px;
+        padding: 10px 12px;
         border: none;
         background: #4a90e2;
         color: white;
         border-radius: 6px;
         cursor: pointer;
-    }
-    #addItemBtn:hover {
-        background: #3576c8;
+        font-size: 16px;   /* ★ ボタン文字も拡大 */
     }
 
     /* 全チェック解除ボタン */
     #clearAllBtn {
         width: 100%;
         margin-top: 25px;
-        padding: 10px 0;
+        padding: 12px 0;
         border: none;
         background: #bbb;
         color: #fff;
         border-radius: 6px;
         cursor: pointer;
+        font-size: 16px;   /* ★ 読みやすく */
     }
-    #clearAllBtn:hover {
-        background: #999;
-    }
-
 </style>
 </head>
+
 <body>
 
 <h1>日常チェックアプリ</h1>
@@ -173,7 +171,7 @@
 
             const ts = document.createElement("span");
             ts.className = "timestamp";
-            ts.textContent = item.timestamp ? item.timestamp : "";
+            ts.textContent = item.timestamp || "";
 
             textContainer.appendChild(label);
             textContainer.appendChild(ts);
@@ -194,10 +192,8 @@
     function toggleCheck(index) {
         const items = loadItems();
         const target = items[index];
-
         target.checked = !target.checked;
         target.timestamp = target.checked ? getNowText() : "";
-
         saveItems(items);
         render();
     }
@@ -205,10 +201,8 @@
     function addItem() {
         const name = document.getElementById("newItemName").value.trim();
         if (!name) return;
-
         const items = loadItems();
         items.push({ name, checked: false, timestamp: "" });
-
         saveItems(items);
         document.getElementById("newItemName").value = "";
         render();
