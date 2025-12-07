@@ -2,8 +2,11 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">  <!-- ★ 追加 -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>日常チェックアプリ</title>
+
+<!-- SortableJS（ドラッグ並び替え用） -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
 <style>
     body {
@@ -11,16 +14,16 @@
         padding: 20px;
         background: #f5f5f7;
         color: #333;
-        max-width: 360px;     /* ★ スマホ幅に最適化 */
+        max-width: 360px;
         margin: auto;
-        font-size: 18px;      /* ★ 全体フォント拡大 */
+        font-size: 18px;
     }
 
     h1 {
         text-align: center;
         margin-bottom: 25px;
         font-weight: 600;
-        font-size: 24px;      /* ★ 見出しも大きめ */
+        font-size: 24px;
     }
 
     /* ---- 各項目カード ---- */
@@ -34,7 +37,7 @@
         border-radius: 10px;
         border: 1px solid #e0e0e0;
         transition: background 0.2s ease;
-        font-size: 18px;     /* ★ 項目テキスト大きく */
+        font-size: 18px;
     }
 
     .item.checked {
@@ -43,7 +46,7 @@
     }
 
     .item input[type="checkbox"] {
-        width: 20px;   /* ★ 大きめ */
+        width: 20px;
         height: 20px;
         vertical-align: middle;
         margin-top: -1px;
@@ -64,7 +67,7 @@
     /* 削除ボタン */
     .deleteBtn {
         padding: 6px 10px;
-        font-size: 14px;   /* ★ 見やすく拡大 */
+        font-size: 14px;
         border: none;
         background: #ddd;
         border-radius: 6px;
@@ -83,7 +86,7 @@
         padding: 10px;
         border: 1px solid #ccc;
         border-radius: 6px;
-        font-size: 16px;   /* ★ 入力欄拡大 */
+        font-size: 16px;
     }
 
     #addItemBtn {
@@ -93,7 +96,7 @@
         color: white;
         border-radius: 6px;
         cursor: pointer;
-        font-size: 16px;   /* ★ ボタン文字も拡大 */
+        font-size: 16px;
     }
 
     /* 全チェック解除ボタン */
@@ -106,7 +109,12 @@
         color: #fff;
         border-radius: 6px;
         cursor: pointer;
-        font-size: 16px;   /* ★ 読みやすく */
+        font-size: 16px;
+    }
+
+    /* ドラッグ中のスタイル */
+    .drag-ghost {
+        opacity: 0.4;
     }
 </style>
 </head>
@@ -165,7 +173,6 @@
             cb.onchange = () => toggleCheck(idx);
 
             const textContainer = document.createElement("div");
-
             const label = document.createElement("div");
             label.textContent = item.name;
 
@@ -187,6 +194,8 @@
 
             container.appendChild(div);
         });
+
+        initSortable();
     }
 
     function toggleCheck(index) {
@@ -223,6 +232,23 @@
         });
         saveItems(items);
         render();
+    }
+
+    /* ---- SortableJS（並び替え機能） ---- */
+    function initSortable() {
+        const container = document.getElementById("items");
+
+        Sortable.create(container, {
+            animation: 150,
+            ghostClass: "drag-ghost",
+            onEnd: function (evt) {
+                const items = loadItems();
+                const moved = items.splice(evt.oldIndex, 1)[0];
+                items.splice(evt.newIndex, 0, moved);
+                saveItems(items);
+                render();
+            }
+        });
     }
 
     render();
